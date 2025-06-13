@@ -1,0 +1,90 @@
+{
+  "project": "Bloqueo de peticiones Ping con iptables",
+  "author": "Joel Mutua",
+  "course": "4Geeks Bootcamp",
+  "date": "2023-11-15",
+  "environment": {
+    "host_os": "Windows 11 Pro 22H2",
+    "virtualization": "VirtualBox 7.0.10",
+    "guest_os": "Debian 11 (Bullseye)",
+    "kernel": "5.10.0-23-amd64",
+    "network_setup": "NAT + Host-only Adapter"
+  },
+  "objectives": [
+    "Bloquear peticiones ICMP (ping) entrantes",
+    "Configurar persistencia de reglas iptables",
+    "Verificar el bloqueo efectivo"
+  ],
+  "methodology": {
+    "step_1": "Verificación estado actual iptables",
+    "step_2": "Creación reglas de bloqueo ICMP",
+    "step_3": "Configuración persistente",
+    "step_4": "Pruebas de conectividad"
+  },
+  "implementation": [
+    {
+      "command": "sudo iptables -L -n -v --line-numbers",
+      "purpose": "Verificar reglas existentes",
+      "output_sample": "Chain INPUT (policy ACCEPT 134 packets, 12583 bytes)"
+    },
+    {
+      "command": "sudo iptables -A INPUT -p icmp --icmp-type echo-request -j DROP",
+      "purpose": "Bloquear pings entrantes",
+      "technical_details": "Esta regla descarta paquetes ICMP tipo 8 (echo request)"
+    },
+    {
+      "command": "sudo iptables -A OUTPUT -p icmp --icmp-type echo-reply -j DROP",
+      "purpose": "Bloquear respuestas a ping",
+      "technical_details": "Evita respuestas a paquetes ICMP que logren entrar"
+    },
+    {
+      "command": "sudo iptables-save | sudo tee /etc/iptables/rules.v4",
+      "purpose": "Hacer persistente la configuración",
+      "note": "Requiere paquete iptables-persistent instalado"
+    }
+  ],
+  "verification": [
+    {
+      "test": "ping -c 4 [IP_DEBIAN]",
+      "expected_result": "100% packet loss",
+      "from_host": "Windows PowerShell"
+    },
+    {
+      "test": "sudo iptables -L INPUT -n -v",
+      "expected_result": "Mostrar paquetes ICMP bloqueados en contador"
+    }
+  ],
+  "troubleshooting": {
+    "common_issues": [
+      "Reglas no persisten después de reinicio (solucionar con iptables-persistent)",
+      "Bloqueo completo de tráfico ICMP (verificar --icmp-type específico)"
+    ],
+    "log_check": "sudo tail -f /var/log/syslog | grep iptables"
+  },
+  "development_log": [
+    "2023-11-15 09:30: Configuración inicial VM Debian",
+    "2023-11-15 10:15: Pruebas preliminares de conectividad",
+    "2023-11-15 11:02: Implementación reglas iptables",
+    "2023-11-15 11:30: Verificación persistencia tras reboot"
+  ],
+  "additional_configuration": [
+    {
+      "file": "/etc/sysctl.conf",
+      "parameters": [
+        "net.ipv4.icmp_echo_ignore_all=1",
+        "net.ipv4.icmp_echo_ignore_broadcasts=1"
+      ],
+      "purpose": "Refuerzo del bloqueo a nivel kernel"
+    }
+  ],
+  "references": [
+    "Manual iptables(8)",
+    "Debian Firewall Handbook",
+    "RFC 792 (Protocolo ICMP)"
+  ],
+  "notes": "Configuración realizada via SSH desde Windows Terminal usando clave RSA-4096",
+  "signature": {
+    "student": "Joel Mutua",
+    "validator": "sha256:4a1b3c... (generar con: sha256sum report.json)"
+  }
+}
