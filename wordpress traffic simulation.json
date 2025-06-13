@@ -1,0 +1,158 @@
+{
+  "project": "WordPress Traffic Simulation with Apache Benchmark",
+  "author": "Joel Mutua",
+  "course": "4Geeks Bootcamp",
+  "date": "2023-11-15",
+  "environment": {
+    "test_environment": {
+      "hypervisor": "Oracle VirtualBox 7.0",
+      "network_mode": "Bridged Adapter",
+      "machines": [
+        {
+          "role": "Web Server",
+          "os": "Debian 11 (Bullseye)",
+          "services": ["Apache 2.4.56", "WordPress 6.3.1", "MySQL 15.1"],
+          "monitoring_tools": ["htop", "vmstat"]
+        },
+        {
+          "role": "Attacker",
+          "os": "Kali Linux 2023.3",
+          "tools": ["Apache Benchmark 2.3", "ping"]
+        }
+      ]
+    }
+  },
+  "network_configuration": {
+    "debian_server": {
+      "ip_address": "192.168.1.100",
+      "network_interface": "enp0s3",
+      "connectivity_test": {
+        "ping_kali": "3 packets transmitted, 3 received, 0% packet loss"
+      }
+    },
+    "kali_machine": {
+      "ip_address": "192.168.1.101",
+      "network_interface": "eth0",
+      "connectivity_test": {
+        "ping_debian": "3 packets transmitted, 3 received, 0% packet loss"
+      }
+    }
+  },
+  "test_parameters": {
+    "benchmark_tool": "ab (Apache Benchmark)",
+    "test_cases": [
+      {
+        "test_name": "Baseline Load",
+        "command": "ab -n 1000 -c 10 http://192.168.1.100/",
+        "total_requests": 1000,
+        "concurrent_requests": 10
+      },
+      {
+        "test_name": "Stress Test",
+        "command": "ab -n 5000 -c 200 http://192.168.1.100/",
+        "total_requests": 5000,
+        "concurrent_requests": 200
+      }
+    ]
+  },
+  "performance_metrics": {
+    "baseline_load": {
+      "requests_per_second": 143.21,
+      "time_per_request": 69.832,
+      "transfer_rate": 132.64,
+      "server_stats": {
+        "cpu_usage": "35-48%",
+        "memory_usage": "1.2/3.9 GB",
+        "load_average": ["1.21", "0.98", "0.75"]
+      }
+    },
+    "stress_test": {
+      "requests_per_second": 89.54,
+      "time_per_request": 2234.112,
+      "transfer_rate": 82.91,
+      "server_stats": {
+        "cpu_usage": "78-92%",
+        "memory_usage": "2.8/3.9 GB",
+        "load_average": ["4.32", "3.56", "2.11"],
+        "performance_observations": {
+          "stable_memory": "Up to 3500 requests at 2.5GB usage",
+          "cpu_load_average": "85% during peak",
+          "throttling_observed": true,
+          "swap_usage": "15% utilized"
+        }
+      }
+    }
+  },
+  "resource_analysis": {
+    "excessive_usage": {
+      "cpu_peak_usage": {
+        "observed": true,
+        "peak_percentage": 92,
+        "request_count_at_peak": 4200,
+        "duration": "2 minutes 15 seconds"
+      },
+      "memory_pressure": {
+        "observed": true,
+        "peak_usage": "3.1GB",
+        "oom_events": 0
+      }
+    },
+    "server_capacity": {
+      "max_sustainable_load": "150 concurrent users",
+      "breaking_point": "250+ concurrent users",
+      "bottleneck": "CPU cores (limited to 2 vCPUs)",
+      "recommendations": [
+        "Upgrade to 4 vCPUs",
+        "Implement caching (WP Rocket)",
+        "Configure PHP-FPM pools"
+      ]
+    }
+  },
+  "monitoring_data": {
+    "htop_screenshots": [
+      "htop_baseline.png",
+      "htop_stress.png"
+    ],
+    "key_processes": [
+      {
+        "name": "apache2",
+        "cpu_impact": "High during peaks",
+        "memory_footprint": "~250MB per child"
+      },
+      {
+        "name": "mysqld",
+        "cpu_impact": "Medium",
+        "memory_footprint": "~1.2GB"
+      }
+    ]
+  },
+  "conclusions": {
+    "server_performance": "Adequate for moderate traffic (up to 100 concurrent users)",
+    "critical_findings": [
+      "CPU becomes bottleneck under heavy load",
+      "MySQL consumes significant resources",
+      "No crashes observed during tests"
+    ],
+    "optimization_opportunities": [
+      "Implement OPcache for PHP",
+      "Configure Apache MPM prefork settings",
+      "Add Cloudflare caching layer"
+    ]
+  },
+  "appendix": {
+    "raw_data_files": [
+      "report_ab.txt",
+      "htop_logs.json"
+    ],
+    "execution_notes": [
+      "All tests conducted between 14:00-16:00 UTC",
+      "No other services running during tests",
+      "VirtualBox allocated 2 vCPUs and 4GB RAM to Debian VM"
+    ],
+    "validation_checks": {
+      "network_latency": "<1ms between VMs",
+      "disk_io": "SSD storage used",
+      "temperature_monitoring": "No thermal throttling"
+    }
+  }
+}
